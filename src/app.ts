@@ -23,7 +23,7 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === "development") {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app") || process.env.NODE_ENV === "development") {
       callback(null, true);
     } else {
       callback(new Error("CORS policy violation"));
