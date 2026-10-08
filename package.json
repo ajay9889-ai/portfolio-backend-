@@ -2,12 +2,13 @@
   "name": "portfolio-backend",
   "version": "1.0.0",
   "description": "High-performance Node.js backend API for personal portfolio",
-  "main": "src/server.ts",
+  "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "echo \"No test specified\" && exit 0"
+    "test": "echo \"No test specified\" && exit 0",
+    "postinstall": "npm run build"
   },
   "keywords": [
     "portfolio",
@@ -30,7 +31,10 @@
     "mongoose": "^9.11.1",
     "morgan": "^1.10.0",
     "nodemailer": "^10.0.16",
-    "zod": "^3.24.2"
+    "socket.io": "^4.8.4",
+    "zod": "^3.24.2",
+    "typescript": "^5.7.3",
+    "tsx": "^4.19.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -41,5 +45,6 @@
     "@types/node": "^22.13.4",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3"
-  }
+  },
+  "type": "module"
 }
