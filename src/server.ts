@@ -1,16 +1,26 @@
 import "dotenv/config";
-import { app } from "./app.js";
+import type { Express } from "express";
+
+let app: Express;
+try {
+  const mod = await import("./app.js");
+  app = mod.app;
+} catch {
+  // @ts-ignore
+  const mod = await import("../dist/app.js");
+  app = mod.app;
+}
 
 const PORT = process.env.PORT || 5001;
 
 const server = app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`🚀 Portfolio Backend API is Live!`);
+  console.log("====================================================");
+  console.log("🚀 Portfolio Backend API is Live!");
   console.log(`📡 URL: http://localhost:${PORT}`);
   console.log(`🩺 Health: http://localhost:${PORT}/health`);
   console.log(`📚 API Root: http://localhost:${PORT}${process.env.API_PREFIX || "/api/v1"}`);
   console.log(`⚙️  Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`====================================================`);
+  console.log("====================================================");
 });
 
 const handleShutdown = (signal: string) => {
