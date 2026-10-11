@@ -47,30 +47,30 @@ const sendNotificationEmail = async (msg: ContactMessage): Promise<void> => {
   const notifyEmail = process.env.OWNER_NOTIFY_EMAIL || process.env.SMTP_USER;
 
   const htmlBody = `
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 560px; margin: 0 auto; background: #0a0a0a; border: 1px solid #222; border-radius: 12px; overflow: hidden;">
-      <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); padding: 24px 28px;">
-        <h2 style="margin: 0; color: #fff; font-size: 18px; font-weight: 600;">📬 New Portfolio Message</h2>
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 560px; margin: 0 auto; background: #0E0E12; border: 1px solid rgba(255,255,255,0.10); border-radius: 14px; overflow: hidden;">
+      <div style="background: linear-gradient(135deg, #FF5500, #FF7A00); padding: 24px 28px;">
+        <h2 style="margin: 0; color: #fff; font-size: 18px; font-weight: 700;">📬 New Portfolio Message</h2>
       </div>
       <div style="padding: 28px;">
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td style="padding: 8px 0; color: #888; font-size: 13px; width: 80px; vertical-align: top;">From</td>
-            <td style="padding: 8px 0; color: #e5e5e5; font-size: 14px; font-weight: 500;">${msg.name}</td>
+            <td style="padding: 8px 0; color: #8B8B95; font-size: 13px; width: 80px; vertical-align: top;">From</td>
+            <td style="padding: 8px 0; color: #ffffff; font-size: 14px; font-weight: 600;">${msg.name}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 0; color: #888; font-size: 13px; vertical-align: top;">Email</td>
-            <td style="padding: 8px 0;"><a href="mailto:${msg.email}" style="color: #818cf8; text-decoration: none; font-size: 14px;">${msg.email}</a></td>
+            <td style="padding: 8px 0; color: #8B8B95; font-size: 13px; vertical-align: top;">Email</td>
+            <td style="padding: 8px 0;"><a href="mailto:${msg.email}" style="color: #FF7A00; text-decoration: none; font-size: 14px;">${msg.email}</a></td>
           </tr>
           <tr>
-            <td style="padding: 8px 0; color: #888; font-size: 13px; vertical-align: top;">Subject</td>
-            <td style="padding: 8px 0; color: #e5e5e5; font-size: 14px;">${msg.subject}</td>
+            <td style="padding: 8px 0; color: #8B8B95; font-size: 13px; vertical-align: top;">Subject</td>
+            <td style="padding: 8px 0; color: #E0E0E8; font-size: 14px;">${msg.subject}</td>
           </tr>
         </table>
-        <div style="margin-top: 20px; padding: 16px; background: #111; border: 1px solid #222; border-radius: 8px;">
-          <p style="margin: 0; color: #ccc; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${msg.message}</p>
+        <div style="margin-top: 20px; padding: 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;">
+          <p style="margin: 0; color: #E0E0E8; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${msg.message}</p>
         </div>
-        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #1a1a1a;">
-          <p style="margin: 0; color: #555; font-size: 11px;">
+        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
+          <p style="margin: 0; color: #555; font-size: 11px; font-family: monospace;">
             Received at ${new Date(msg.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST
             &nbsp;·&nbsp; ID: ${msg.id}
           </p>

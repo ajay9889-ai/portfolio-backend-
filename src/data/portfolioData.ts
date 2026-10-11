@@ -4,13 +4,13 @@ export interface Project {
   slug: string;
   tagline: string;
   description: string;
-  category: "Full Stack" | "AI & ML" | "Systems & Cloud" | "Frontend";
+  category: "Full Stack" | "AI & ML" | "Systems & IoT" | "Game Dev";
   technologies: string[];
   featured: boolean;
+  badge?: string;
   metrics?: { label: string; value: string }[];
   githubUrl?: string;
   liveUrl?: string;
-  coverImage?: string;
 }
 
 export interface SkillCategory {
@@ -24,93 +24,79 @@ export interface ExperienceItem {
   company: string;
   period: string;
   location: string;
-  type: "Full-time" | "Contract" | "Open Source" | "Freelance";
+  type: "Full-time" | "Contract" | "Internship" | "Freelance";
   description: string[];
   skills: string[];
 }
 
 export const PROFILE = {
-  name: "Ajay H",
-  title: "Senior Full-Stack & AI Systems Engineer",
-  tagline: "Architecting high-performance web applications, resilient distributed systems, and modern AI pipelines.",
-  bio: "Passionate software engineer with deep expertise in modern TypeScript/Next.js architectures, scalable Node.js microservices, and AI-driven data intelligence. Dedicated to building world-class user experiences backed by robust, secure backend engines.",
-  location: "Bengaluru, India",
-  availability: "Available for high-impact roles & select consulting projects",
+  name: "Ajay A",
+  title: "Full-Stack Developer & AI Systems Engineer",
+  tagline: "Building high-impact web products from the interface to the API, from Bengaluru.",
+  bio: "MCA graduate passionate about shipping React and Next.js applications, wiring them to scalable APIs, and engineering AI-powered features. HackVerse 2025 winner. Software development intern at BrikUp, building production features.",
+  location: "Bengaluru, Karnataka, India",
+  availability: "Available for full-time roles, contracts & freelance projects",
   email: "ajayhasrb123@gmail.com",
   socials: {
     github: "https://github.com/ajay9889-ai",
-    linkedin: "https://linkedin.com",
+    linkedin: "https://linkedin.com/in/ajay-a",
     twitter: "https://x.com",
   },
   stats: [
-    { label: "Years of Experience", value: "4+" },
-    { label: "Projects Completed", value: "35+" },
-    { label: "Production Deployments", value: "50+" },
-    { label: "Code Quality SLA", value: "99.9%" }
+    { label: "MCA CGPA", value: "8.5" },
+    { label: "Projects Built", value: "3+" },
+    { label: "Hackathon Win", value: "1st 🏆" },
+    { label: "Available", value: "Now" }
   ]
 };
 
 export const PROJECTS: Project[] = [
   {
-    id: "nara-ai-platform",
-    title: "Nara AI — Autonomous Data Intelligence Platform",
-    slug: "nara-ai",
-    tagline: "Automated multi-dataset statistical analysis, truth-gate verification, and LangGraph business insights engine.",
-    description: "An enterprise-grade analytical intelligence platform featuring automated CSV/Parquet profiling, statistical KPI computation, AST-sandboxed SQL execution, and multi-tenant RBAC.",
-    category: "AI & ML",
-    technologies: ["Next.js 15", "TypeScript", "Python", "FastAPI", "DuckDB", "PostgreSQL", "Tailwind CSS", "LangGraph"],
+    id: "eldernest",
+    title: "ElderNest",
+    slug: "eldernest",
+    badge: "HackVerse 2025 — 1st Place 🏆",
+    tagline: "Empathetic, WCAG-compliant assistive web platform for elderly users.",
+    description: "ElderNest is an empathetic assistive web platform designed for senior citizens. It pairs high-contrast WCAG-compliant design with peer community spaces and immediate one-tap emergency SOS assistance dispatching.",
+    category: "Full Stack",
+    technologies: ["React.js", "Next.js", "Tailwind CSS", "REST APIs", "Node.js"],
     featured: true,
     metrics: [
-      { label: "Query Latency", value: "< 45ms" },
-      { label: "Test Pass Rate", value: "100%" },
-      { label: "Engine Speed", value: "10k rows/s" }
-    ],
-    githubUrl: "https://github.com/nara-ai-tech",
-    liveUrl: "https://nara.ai"
-  },
-  {
-    id: "cinematic-motion-studio",
-    title: "Cinematic 60FPS Launch Film Studio",
-    slug: "motion-studio",
-    tagline: "Hardware-accelerated web animation engine with audio-sync timeline choreography.",
-    description: "An interactive 75-second high-end product film renderer built with requestAnimationFrame time orchestration, Web Audio narrator cues, and multi-camera smooth zoom interpolation.",
-    category: "Frontend",
-    technologies: ["Next.js 15", "React 19", "Framer Motion", "Web Audio API", "Canvas 2D", "Tailwind CSS"],
-    featured: true,
-    metrics: [
-      { label: "Frame Rate", value: "Locked 60 FPS" },
-      { label: "Audio Precision", value: "Sub-millisecond" }
-    ],
-    githubUrl: "https://github.com/ajay9889-ai",
-    liveUrl: "http://localhost:5000/promo"
-  },
-  {
-    id: "cloud-distributed-ledger",
-    title: "High-Concurrency Credit & Billing Ledger",
-    slug: "credit-ledger",
-    tagline: "ACID-compliant reservation-hold and settlement engine with idempotent idempotency locks.",
-    description: "A distributed financial balance engine supporting 2-phase hold/settle semantics, cryptographic service-to-service JWT verification, and automated stripe webhook reconciliation.",
-    category: "Systems & Cloud",
-    technologies: ["Node.js", "Express", "PostgreSQL", "Redis", "Docker", "Zod", "Vitest"],
-    featured: true,
-    metrics: [
-      { label: "Concurrency", value: "5,000 req/s" },
-      { label: "Ledger Drift", value: "0.00%" }
+      { label: "Hackathon Rank", value: "1st Place" },
+      { label: "Accessibility", value: "WCAG AAA" },
+      { label: "Features", value: "SOS + Community" }
     ],
     githubUrl: "https://github.com/ajay9889-ai"
   },
   {
-    id: "saas-dashboard-pro",
-    title: "Nexus — Enterprise Analytics & KPI Studio",
-    slug: "nexus-analytics",
-    tagline: "Real-time data visualization dashboard with drag-and-drop widget canvas.",
-    description: "Modular dashboard builder supporting custom formula metric calculations, live WebSocket streams, and high-performance SVG/Canvas charting.",
-    category: "Full Stack",
-    technologies: ["React", "TypeScript", "Node.js", "Tailwind CSS", "Chart.js", "PostgreSQL"],
-    featured: false,
+    id: "wisdomplay",
+    title: "WisdomPlay",
+    slug: "wisdomplay",
+    tagline: "Multilingual educational Unity game with dynamic JSON-driven quizzes and audio cues.",
+    description: "An interactive educational gaming environment designed to teach core curriculum concepts across multiple Indian regional languages via dynamic JSON-driven questions, responsive 2D animation controllers, and audio cues.",
+    category: "Game Dev",
+    technologies: ["Unity", "C#", "JSON", "Audio Systems", "Animation Controller"],
+    featured: true,
     metrics: [
-      { label: "Live Charts", value: "50+ Types" },
-      { label: "Export Formats", value: "PDF, SVG, CSV" }
+      { label: "Languages", value: "Multi-lingual" },
+      { label: "Content System", value: "JSON-driven" },
+      { label: "Platform", value: "Unity 2D" }
+    ],
+    githubUrl: "https://github.com/ajay9889-ai"
+  },
+  {
+    id: "smart-attendance-system",
+    title: "Smart Attendance System",
+    slug: "smart-attendance-system",
+    tagline: "IoT/RFID automated attendance pipeline with sub-400ms scans and auto-reports.",
+    description: "Hardware-to-cloud automated attendance pipeline utilizing high-frequency RFID scanners, Python processing bridge, MySQL database logging, and automated CSV/Excel administrative reports.",
+    category: "Systems & IoT",
+    technologies: ["Python", "RFID Hardware", "MySQL", "Node.js", "REST APIs"],
+    featured: true,
+    metrics: [
+      { label: "Scan Latency", value: "< 400ms" },
+      { label: "Reports", value: "Auto CSV/Excel" },
+      { label: "Queuing", value: "Zero" }
     ],
     githubUrl: "https://github.com/ajay9889-ai"
   }
@@ -118,82 +104,79 @@ export const PROJECTS: Project[] = [
 
 export const SKILL_CATEGORIES: SkillCategory[] = [
   {
-    category: "Frontend Engineering",
+    category: "Frontend",
     skills: [
-      { name: "Next.js 15 & React 19", level: 95, icon: "SiNextdotjs", highlight: true },
-      { name: "TypeScript", level: 95, icon: "SiTypescript", highlight: true },
-      { name: "Tailwind CSS & Design Systems", level: 92, icon: "SiTailwindcss", highlight: true },
-      { name: "Framer Motion & Animations", level: 88, icon: "SiFramer" },
-      { name: "State Management (Zustand/Redux)", level: 90, icon: "SiRedux" },
-      { name: "Web Audio & Media APIs", level: 85, icon: "SiHtml5" }
+      { name: "React.js", level: 90, icon: "SiReact", highlight: true },
+      { name: "Next.js 15/16 (App Router)", level: 90, icon: "SiNextdotjs", highlight: true },
+      { name: "TypeScript", level: 85, icon: "SiTypescript", highlight: true },
+      { name: "Tailwind CSS", level: 92, icon: "SiTailwindcss" },
+      { name: "Framer Motion", level: 80, icon: "SiFramer" },
+      { name: "Three.js", level: 75, icon: "SiThreedotjs" }
     ]
   },
   {
-    category: "Backend & Distributed Systems",
+    category: "Backend & APIs",
     skills: [
-      { name: "Node.js & Express / NestJS", level: 94, icon: "SiNodedotjs", highlight: true },
-      { name: "Python & FastAPI", level: 90, icon: "SiFastapi", highlight: true },
-      { name: "REST & GraphQL API Architecture", level: 92, icon: "SiGraphql" },
-      { name: "Microservices & Event-Driven Systems", level: 88, icon: "SiApachekafka" },
-      { name: "Authentication (OAuth2, JWT, RBAC)", level: 92, icon: "SiJsonwebtokens" }
+      { name: "Node.js", level: 88, icon: "SiNodedotjs", highlight: true },
+      { name: "Express.js", level: 85, icon: "SiExpress" },
+      { name: "Python", level: 82, icon: "SiPython" },
+      { name: "REST API Design", level: 88, icon: "SiPostman" },
+      { name: "JWT Authentication", level: 85, icon: "SiJsonwebtokens" },
+      { name: "WebSocket / Socket.IO", level: 78, icon: "SiSocketdotio" }
     ]
   },
   {
-    category: "Databases & Storage",
+    category: "Databases",
     skills: [
-      { name: "PostgreSQL & Supabase", level: 92, icon: "SiPostgresql", highlight: true },
-      { name: "DuckDB & SQLite Engine", level: 88, icon: "SiSqlite" },
-      { name: "Redis & In-Memory Caching", level: 90, icon: "SiRedis" },
-      { name: "ChromaDB & Vector Stores (pgvector)", level: 85, icon: "SiOpenai" }
+      { name: "PostgreSQL", level: 85, icon: "SiPostgresql", highlight: true },
+      { name: "MongoDB", level: 82, icon: "SiMongodb" },
+      { name: "MySQL", level: 85, icon: "SiMysql" },
+      { name: "Supabase", level: 78, icon: "SiSupabase" },
+      { name: "Prisma ORM", level: 80, icon: "SiPrisma" }
     ]
   },
   {
-    category: "AI, ML & Data Pipelines",
+    category: "DevOps & Tools",
     skills: [
-      { name: "LangGraph & LangChain Agents", level: 90, icon: "SiOpenai", highlight: true },
-      { name: "Gemini & OpenAI API Integration", level: 92, icon: "SiGoogle" },
-      { name: "Data Profiling & Automated EDA", level: 88, icon: "SiPandas" },
-      { name: "Prompt Engineering & Guardrails", level: 92, icon: "SiShieldsdotio" }
-    ]
-  },
-  {
-    category: "DevOps & Cloud Tools",
-    skills: [
-      { name: "Docker & Containerization", level: 88, icon: "SiDocker", highlight: true },
-      { name: "Git, GitHub Actions & CI/CD", level: 90, icon: "SiGithubactions" },
-      { name: "AWS / GCP Cloud Storage & Compute", level: 85, icon: "SiGooglecloud" },
-      { name: "Vercel & Render Cloud Hosting", level: 92, icon: "SiVercel" }
+      { name: "Git & GitHub", level: 90, icon: "SiGit", highlight: true },
+      { name: "Docker", level: 75, icon: "SiDocker" },
+      { name: "Vercel", level: 88, icon: "SiVercel" },
+      { name: "Render", level: 82, icon: "SiRender" },
+      { name: "Linux", level: 78, icon: "SiLinux" },
+      { name: "AWS (Basic)", level: 65, icon: "SiAmazonaws" }
     ]
   }
 ];
 
 export const EXPERIENCES: ExperienceItem[] = [
   {
-    id: "exp-1",
-    role: "Lead Full-Stack & AI Systems Architect",
-    company: "Nara AI Technologies",
-    period: "2024 — Present",
+    id: "brikup-intern",
+    role: "Software Development Engineer Intern",
+    company: "BrikUp",
+    period: "Internship",
     location: "Bengaluru, India",
-    type: "Full-time",
+    type: "Internship",
     description: [
-      "Architected and deployed end-to-end analytical intelligence engine processing multi-gigabyte datasets with sub-second response times.",
-      "Engineered 75s launch film platform with Web Audio streaming, high-fps camera zoom transforms, and responsive timeline model.",
-      "Implemented strict RBAC, multi-tenant workspace isolation, and automated credit reservation/settlement ledgers with zero balance drift."
+      "Built and optimized production features using React.js, Next.js, JavaScript, and Tailwind CSS.",
+      "Integrated REST APIs for data retrieval, authentication, user profiles, bookings, and reviews.",
+      "Debugged complex API and data-rendering issues across multiple application views.",
+      "Ran functional testing across login, onboarding, profile, booking, and review flows.",
+      "Used Git/GitHub with branch-based collaborative development workflow."
     ],
-    skills: ["Next.js 15", "TypeScript", "Python", "FastAPI", "PostgreSQL", "DuckDB", "Tailwind CSS"]
+    skills: ["React.js", "Next.js", "JavaScript", "Tailwind CSS", "REST APIs", "Git", "GitHub"]
   },
   {
-    id: "exp-2",
-    role: "Senior Software Engineer (Full Stack)",
-    company: "Venture Data Labs",
-    period: "2022 — 2024",
+    id: "mca-bmsit",
+    role: "MCA Student — Full Stack & AI Focus",
+    company: "BMS Institute of Technology and Management",
+    period: "2023 — 2025",
     location: "Bengaluru, India",
     type: "Full-time",
     description: [
-      "Built modular business dashboard generator with interactive visualization components and dynamic export engines.",
-      "Designed resilient REST API gateway handling over 10M monthly requests with rate limiting and automated circuit breakers.",
-      "Spearheaded frontend migration to React with TypeScript, cutting bundle sizes by 42% and raising Lighthouse performance score to 98."
+      "Specialized in Software Engineering, Full-Stack Web Architecture, and Scalable Databases.",
+      "Won 1st Place at HackVerse 2025 Hackathon with ElderNest — an accessible assistive platform for elderly users.",
+      "Graduated with 8.5 CGPA."
     ],
-    skills: ["React", "Node.js", "TypeScript", "PostgreSQL", "Redis", "Docker", "AWS"]
+    skills: ["React.js", "Node.js", "Next.js", "Python", "PostgreSQL", "MongoDB", "System Design"]
   }
 ];
