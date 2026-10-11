@@ -24,18 +24,11 @@ const messagesStore: ContactMessage[] = [];
 
 // Create reusable Gmail transporter
 const createTransporter = () => {
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (!user || !pass) {
-    console.warn("[Email] SMTP_USER or SMTP_PASS not set — email notifications disabled.");
-    return null;
-  }
+  const user = process.env.SMTP_USER || "ajayhasrb123@gmail.com";
+  const pass = process.env.SMTP_PASS || "eegktgkbtkcoqbyv";
 
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: false,
+    service: "gmail",
     auth: { user, pass },
   });
 };
