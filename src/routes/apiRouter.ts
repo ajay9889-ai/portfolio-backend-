@@ -8,6 +8,7 @@ import {
   getStats
 } from "../controllers/portfolioController.js";
 import { submitContact, getContactSubmissions } from "../controllers/contactController.js";
+import { handleChat } from "../controllers/chatController.js";
 
 const router = Router();
 
@@ -23,4 +24,8 @@ router.get("/stats", getStats);
 router.post("/contact", submitContact);
 router.get("/contact/messages", getContactSubmissions);
 
+// AI Voice & Chat Agent
+router.post("/chat", handleChat);
+
 export { router as apiRouter };
+
