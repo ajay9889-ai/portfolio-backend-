@@ -105,13 +105,22 @@ You have tools available:
 - \`send_message_to_ajay\`: Forward visitor message draft to client.
 
 ═══════════════════════════════════════════════════════
+OUT-OF-THE-BOX & GENERAL KNOWLEDGE QUESTIONS (CRITICAL)
+═══════════════════════════════════════════════════════
+• When a user asks general knowledge questions, technical concepts, programming advice, explanations, code snippets, or anything outside of Ajay's personal biography (e.g., "What is AI?", "How does Docker work?", "Explain quantum computing", "How do I reverse a string in JS?", "Tell me a joke", or general queries):
+  1. ALWAYS ANSWER DIRECTLY, INTELLIGENTLY, AND CLEARLY using your full Gemini AI knowledge!
+  2. NEVER refuse, deflect, or say "I only know about Ajay". You are a versatile, highly intelligent AI assistant embedded in his site.
+  3. Keep answers clear, insightful, and concise (typically 2-4 sentences, or clean code blocks if requested).
+  4. If naturally relevant, you may briefly note how Ajay works with or applies the concept (e.g., "AI is the simulation of human intelligence... Ajay applies agentic AI workflows and LLM APIs in web apps like ElderNest"), but the user's question MUST always be answered directly and thoroughly first!
+
+═══════════════════════════════════════════════════════
 RESPONSE INSTRUCTIONS
 ═══════════════════════════════════════════════════════
 • Be professional, confident, warm, and natural.
-• Keep responses conversational — typically 2-3 sentences — optimized for voice readout.
+• Keep responses conversational — typically 2-3 sentences — optimized for voice readout and chat.
 • Avoid complex markdown tables or excessive bullet points that sound unnatural when read aloud.
-• Always give direct, helpful answers grounded in Ajay's actual data above.
-• Never invent facts not listed above. If you don't know something, say so and suggest contacting Ajay directly.
+• For questions about Ajay, his experience, projects, or education, always give accurate answers grounded in his portfolio data.
+• For out-of-the-box, technical, or general knowledge questions, answer authoritatively, helpfully, and enthusiastically!
 `.trim();
 
 export interface PatternRule {
@@ -236,6 +245,39 @@ export const KNOWLEDGE_BASE: PatternRule[] = [
   {
     keywords: ['three.js', 'threejs', '3d', 'animation', 'canvas', 'webgl'],
     response: "Yes! Ajay works with Three.js for 3D web graphics. The animated 3D orbit canvas you see on this portfolio's background is built with Three.js — featuring dynamic geometry, orbiting particles, and accent-colored lighting.",
+  },
+  // ── Conceptual & Out-of-the-Box Tech Knowledge ──
+  {
+    keywords: ['what is ai', 'what is artificial intelligence', 'define ai', 'explain ai', 'what does ai mean', 'about ai'],
+    response: "Artificial Intelligence (AI) is the science of training machines to perform cognitive tasks that traditionally require human intelligence — such as natural language understanding, reasoning, pattern recognition, and problem solving. Ajay specializes in integrating modern LLMs and agentic AI systems into full-stack web applications like this portfolio and ElderNest!",
+  },
+  {
+    keywords: ['what is machine learning', 'what is ml', 'define machine learning', 'explain machine learning'],
+    response: "Machine Learning (ML) is a branch of AI where algorithms learn patterns from data and improve their performance over time without being explicitly hardcoded with rules. It powers recommendation engines, predictive analytics, and computer vision systems.",
+  },
+  {
+    keywords: ['what is an llm', 'what is llm', 'what are llms', 'large language model', 'what is gemini', 'what is gpt'],
+    response: "Large Language Models (LLMs) are deep neural networks trained on massive datasets to understand and generate human-like language — like Google Gemini and OpenAI's GPT models. Ajay integrates LLMs directly into web apps via streaming APIs and function calling.",
+  },
+  {
+    keywords: ['what is full stack', 'what is fullstack', 'what does full stack mean', 'full stack developer'],
+    response: "Full-Stack Development means engineering both the client-facing user interface (frontend) and the underlying server logic, APIs, and databases (backend). Ajay is a full-stack engineer who builds complete end-to-end applications from React/Next.js to Node.js and SQL/NoSQL databases.",
+  },
+  {
+    keywords: ['what is react', 'explain react', 'what is nextjs', 'what is next.js'],
+    response: "React is a popular JavaScript library for building fast, component-based user interfaces. Next.js is a production framework that extends React with server-side rendering, static site generation, API routes, and optimized routing — which Ajay used to build this portfolio!",
+  },
+  {
+    keywords: ['what is an api', 'what is api', 'what is rest api', 'rest api', 'restful'],
+    response: "An API (Application Programming Interface) allows different software applications to communicate and exchange data. A REST API uses standard HTTP methods (GET, POST, PUT, DELETE) with JSON payloads to power web and mobile applications.",
+  },
+  {
+    keywords: ['what is docker', 'what is container', 'explain docker'],
+    response: "Docker is an open platform that packages applications and all their dependencies into lightweight, isolated containers. This ensures the application runs consistently across development, testing, and production servers.",
+  },
+  {
+    keywords: ['tell me a joke', 'tell a joke', 'say something funny', 'joke', 'tell joke'],
+    response: "Why do programmers prefer dark mode? Because light attracts bugs! 😄 Speaking of which, you can toggle dark mode using the sun/moon button in the top navigation bar!",
   },
   {
     keywords: ['ai', 'machine learning', 'ml', 'artificial intelligence', 'llm', 'gemini', 'chatbot'],
@@ -381,6 +423,15 @@ export function getIntelligentPortfolioReply(message: string): string {
   // Threshold check: if score is sufficient, return best matched rule
   if (bestRule && highestScore >= 8) {
     return bestRule.response;
+  }
+
+  // If the query is an out-of-the-box question that didn't match specific portfolio rules
+  const isQuestion =
+    query.endsWith('?') ||
+    /^(what|who|where|when|why|how|which|can|could|tell|explain|define|is|are|do|does)\b/i.test(query);
+
+  if (isQuestion) {
+    return "That's a great question! With Gemini connected, I can answer all kinds of technical and out-of-the-box inquiries in depth. For Ajay's portfolio, you can also ask about his projects like ElderNest, his tech stack, or leave him a direct message!";
   }
 
   // Smart default
