@@ -1,487 +1,186 @@
-import { Request, Response } from "express";
+/**
+ * chatController.ts
+ * Upgraded chat controller with:
+ *   - POST /chat: Non-streaming fallback endpoint
+ *   - POST /chat/stream: SSE streaming endpoint with token-by-token output, tool events, and telemetry
+ */
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { generateChat, streamChat, type ChatMessage } from '../services/gemini.js';
+import { recordAnalyticsEvent, recordFeedbackVote } from '../middleware/analyticsMiddleware.js';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPREHENSIVE SYSTEM PROMPT — This is the "training" that makes the AI
-// deeply knowledgeable about Ajay's background for both Gemini and fallback.
-// ─────────────────────────────────────────────────────────────────────────────
+const chatRequestSchema = z.object({
+  message: z.string().optional(),
+  messages: z
+    .array(
+      z.object({
+        sender: z.enum(['user', 'assistant', 'system']),
+        text: z.string(),
+      })
+    )
+    .optional(),
+  history: z.array(z.any()).optional(),
+  lang: z.string().optional().default('en-US'),
+  mode: z.enum(['chat', 'voice']).optional().default('chat'),
+  sessionId: z.string().optional(),
+});
 
-const SYSTEM_INSTRUCTION = `
-You are Ajay's official AI Portfolio Assistant — a warm, confident, and highly knowledgeable voice and chat agent embedded in Ajay A's personal portfolio website.
-
-═══════════════════════════════════════════════════════
-ABOUT AJAY A
-═══════════════════════════════════════════════════════
-• Full Name: Ajay A
-• Location: Bengaluru, Karnataka, India
-• Role Title: Full-Stack Developer & AI Systems Engineer
-• Personal Email: ajayhasrb123@gmail.com
-• GitHub: https://github.com/ajay9889-ai
-• LinkedIn: https://linkedin.com/in/ajay-a
-• Portfolio: This very website you are on!
-
-═══════════════════════════════════════════════════════
-EDUCATION
-═══════════════════════════════════════════════════════
-1. MCA (Master of Computer Applications)
-   • Institution: BMS Institute of Technology and Management (BMSIT&M), Bengaluru
-   • Period: 2023 – 2025
-   • CGPA: 8.5 / 10
-   • Focus: Software Engineering, Full-Stack Web Architecture, Scalable Databases
-   • Achievement: HackVerse 2025 Hackathon Winner (ElderNest project)
-
-2. BCA (Bachelor of Computer Applications)
-   • Institution: Government First Grade College, Sorab, Karnataka
-   • Period: 2020 – 2023
-   • CGPA: 8.2 / 10
-   • Focus: Computer Science fundamentals — C, Java, Python, Web Development, Database Management
-
-═══════════════════════════════════════════════════════
-WORK EXPERIENCE
-═══════════════════════════════════════════════════════
-Software Development Engineer Intern — BrikUp, Bengaluru
-• Built and optimized production features using React.js, Next.js, JavaScript, and Tailwind CSS
-• Integrated REST APIs for data retrieval, authentication, user profiles, bookings, and reviews
-• Debugged complex API and data-rendering issues across the application
-• Ran functional testing across login, onboarding, profile, booking, and review flows
-• Used Git/GitHub with branch-based collaborative development
-• Gained real-world experience shipping features to production under deadlines
-
-═══════════════════════════════════════════════════════
-FEATURED PROJECTS
-═══════════════════════════════════════════════════════
-
-1. ElderNest — 🏆 1st Place Winner at HackVerse 2025
-   • What: An empathetic, WCAG-compliant assistive web platform for elderly users
-   • Features: Real-time emergency SOS dispatching, high-contrast accessible interface, voice-assisted navigation, community peer interaction spaces
-   • Tech: React.js, Next.js, Tailwind CSS, REST APIs, Node.js
-   • Impact: Won 1st Place at HackVerse 2025 hackathon for exceptional accessibility engineering, empathetic UX, and robust API integration
-   • Problem Solved: Elderly individuals face digital exclusion from cluttered modern UIs — ElderNest provides ultra-clean, large-target, high-legibility interfaces
-
-2. WisdomPlay — Multilingual Educational Game
-   • What: Interactive educational gaming environment for learning curriculum concepts across Indian regional languages
-   • Features: Dynamic JSON-driven quiz engines, responsive 2D animation controllers, audio cues, modular level architectures, on-the-fly language switching
-   • Tech: Unity, C#, JSON, Audio Systems, Animation Controllers
-   • Impact: Lightweight, responsive educational experience supporting rapid content additions without game rebuilds
-
-3. Smart Attendance System — IoT/Hardware Automation
-   • What: End-to-end automated attendance pipeline using RFID hardware
-   • Features: RFID card readers → Python processing bridge → MySQL database, sub-400ms verification, automated Excel/CSV reports
-   • Tech: Python, RFID Hardware, MySQL, Node.js, REST APIs
-   • Impact: Zero queuing bottlenecks, instant automated end-of-day attendance summaries
-
-═══════════════════════════════════════════════════════
-TECHNICAL SKILLS
-═══════════════════════════════════════════════════════
-Frontend: React.js, Next.js 15/16 (App Router), TypeScript, JavaScript, HTML5, CSS3, Tailwind CSS, Responsive Design, Framer Motion, Three.js
-Backend & APIs: Node.js, Express.js, Python, REST APIs, JWT Authentication, WebSocket, Socket.IO
-Databases: PostgreSQL, MongoDB, MySQL, Supabase, Prisma ORM
-DevOps & Cloud: Git, GitHub, Docker, Vercel, Render, Linux, basic AWS
-Game Dev: Unity, C#
-Hardware/IoT: RFID integration, Python hardware bridges
-AI/ML: LLM API integration (Gemini), AI-powered features in web apps
-
-═══════════════════════════════════════════════════════
-AVAILABILITY & CONTACT
-═══════════════════════════════════════════════════════
-• Actively available for: Full-time Software Engineering roles, contracts, freelance projects, and collaborations
-• Best way to reach: The Contact form on this portfolio website, or email ajayhasrb123@gmail.com
-• Response time: Typically within 24 hours
-
-═══════════════════════════════════════════════════════
-ABOUT THIS PORTFOLIO WEBSITE
-═══════════════════════════════════════════════════════
-• Built with: Next.js 16, TypeScript, Tailwind CSS, Three.js (3D animated background), Framer Motion
-• Features: Interactive 3D orbit canvas, theme-adaptive dark/light mode, AI voice & chat assistant (you!), contact form with email delivery, project case studies with live emoji reactions
-• Design: Premium editorial aesthetic with solar orange accent, responsive across all devices
-
-═══════════════════════════════════════════════════════
-RESPONSE INSTRUCTIONS
-═══════════════════════════════════════════════════════
-• Be professional, confident, warm, and natural
-• Keep responses conversational — typically 2-4 sentences — optimized for voice readout
-• Always give direct, helpful answers grounded in Ajay's actual data above
-• For hiring/contact queries, warmly encourage using the Contact form or emailing ajayhasrb123@gmail.com
-• Never invent facts not listed above. If you don't know something, say so and suggest contacting Ajay directly
-• When asked casual questions (greetings, jokes, general chat), respond warmly while naturally steering back to Ajay's portfolio
-• You can discuss general programming concepts briefly, but always relate back to Ajay's expertise
-`.trim();
-
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPREHENSIVE FALLBACK KNOWLEDGE ENGINE
-// This fires when Gemini API key is missing, rate-limited, or errors out.
-// Covers 40+ conversation patterns with rich, voice-friendly answers.
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface PatternRule {
-  keywords: string[];
-  response: string;
-}
-
-const KNOWLEDGE_BASE: PatternRule[] = [
-  // ── Greetings & Small Talk ──
-  {
-    keywords: ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'howdy', 'sup', 'yo'],
-    response: "Hey there! 👋 I'm Ajay's AI Assistant. I can tell you all about his projects, tech stack, work experience, and availability. What would you like to know?",
-  },
-  {
-    keywords: ['how are you', 'how do you do', "what's up", 'whats up'],
-    response: "I'm doing great, thanks for asking! I'm here to help you learn about Ajay — his projects, skills, and availability for roles. What can I help with?",
-  },
-  {
-    keywords: ['bye', 'goodbye', 'see you', 'later', 'thanks', 'thank you', 'thankyou'],
-    response: "Thanks for chatting! If you'd like to connect with Ajay, use the Contact form below or email him at ajayhasrb123@gmail.com. Have a great day! 🙌",
-  },
-  {
-    keywords: ['who are you', 'what are you', 'your name', 'are you ai', 'are you a bot', 'are you real'],
-    response: "I'm Ajay's AI Portfolio Assistant — a smart voice and chat agent built right into this portfolio website. I know everything about Ajay's background, projects, and skills. Ask me anything!",
-  },
-
-  // ── About Ajay ──
-  {
-    keywords: ['who is ajay', 'tell me about ajay', 'about ajay', 'introduce ajay', 'about yourself', 'introduce yourself', 'about him'],
-    response: "Ajay A is a Full-Stack Developer & AI Systems Engineer based in Bengaluru, India. He holds an MCA from BMSIT&M with an 8.5 CGPA, won 1st place at HackVerse 2025, and interned as an SDE at BrikUp. He builds web products from frontend to API and works on AI-powered solutions.",
-  },
-  {
-    keywords: ['where is ajay', 'location', 'city', 'where does ajay live', 'based in', 'from where'],
-    response: "Ajay is based in Bengaluru, Karnataka, India — one of India's biggest tech hubs. He's open to both on-site and remote opportunities!",
-  },
-
-  // ── Education ──
-  {
-    keywords: ['education', 'degree', 'college', 'university', 'qualification', 'study', 'studied', 'academic'],
-    response: "Ajay holds an MCA from BMS Institute of Technology and Management (BMSIT&M), Bengaluru with an 8.5 CGPA (2023–2025), and a BCA from Government First Grade College, Sorab with an 8.2 CGPA (2020–2023).",
-  },
-  {
-    keywords: ['mca', 'masters', 'post graduation', 'bmsit', 'bms institute'],
-    response: "Ajay completed his MCA (Master of Computer Applications) from BMSIT&M, Bengaluru (2023–2025) with an excellent 8.5 CGPA. He specialized in Software Engineering, Full-Stack Web Architecture, and Scalable Databases.",
-  },
-  {
-    keywords: ['bca', 'bachelors', 'undergraduate', 'sorab', 'graduation'],
-    response: "Ajay earned his BCA from Government First Grade College, Sorab, Karnataka (2020–2023) with an 8.2 CGPA. He built a strong foundation in Computer Science, C, Java, Python, and Database Management.",
-  },
-  {
-    keywords: ['cgpa', 'gpa', 'marks', 'score', 'grades', 'percentage'],
-    response: "Ajay scored an 8.5 CGPA in his MCA from BMSIT&M, Bengaluru and an 8.2 CGPA in his BCA from Government First Grade College, Sorab. Consistently strong academic performance!",
-  },
-
-  // ── Work Experience ──
-  {
-    keywords: ['brikup', 'intern', 'internship', 'experience', 'work experience', 'company', 'job', 'sde intern', 'professional'],
-    response: "Ajay interned as a Software Development Engineer at BrikUp in Bengaluru. He shipped production features using Next.js and TypeScript, engineered secure REST authentication flows, integrated APIs for profiles and bookings, debugged data-rendering issues, and practiced Git-based collaborative development.",
-  },
-  {
-    keywords: ['what did ajay do at', 'what did he do', 'what was his role', 'responsibilities'],
-    response: "At BrikUp, Ajay built and optimized production frontend features with React.js and Next.js, integrated REST APIs for authentication and data flows, debugged complex rendering issues, ran functional testing across multiple flows, and used Git/GitHub for team collaboration.",
-  },
-
-  // ── ElderNest Project ──
-  {
-    keywords: ['eldernest', 'elder nest', 'hackverse', 'hackathon', 'award', 'winner', 'prize', 'first place', '1st place', 'elderly', 'senior citizen', 'accessible'],
-    response: "ElderNest won 1st Place at HackVerse 2025! 🏆 It's an empathetic, WCAG-compliant web platform for elderly users featuring real-time emergency SOS dispatching, high-contrast accessible UI, voice-assisted navigation, and community peer interaction. Built with React, Next.js, Tailwind CSS, and Node.js.",
-  },
-
-  // ── WisdomPlay Project ──
-  {
-    keywords: ['wisdomplay', 'wisdom play', 'game', 'unity', 'educational', 'multilingual', 'quiz'],
-    response: "WisdomPlay is a multilingual educational game built in Unity and C#. It features dynamic JSON-driven quizzes, responsive 2D animation controllers, audio cues, and modular level architectures. It supports on-the-fly language switching across Indian regional languages without requiring game rebuilds.",
-  },
-
-  // ── Smart Attendance System ──
-  {
-    keywords: ['attendance', 'iot', 'rfid', 'hardware', 'smart attendance', 'card reader', 'scanner'],
-    response: "The Smart Attendance System is an IoT automation solution connecting RFID card readers to a Python processing bridge and MySQL database. It achieves sub-400ms contactless attendance scans with zero queuing and generates automated Excel/CSV attendance reports.",
-  },
-
-  // ── Projects General ──
-  {
-    keywords: ['projects', 'what has ajay built', 'portfolio projects', 'what did ajay build', 'show projects', 'your projects', 'his projects'],
-    response: "Ajay has three featured projects: 1) ElderNest — HackVerse 2025 winner for elderly accessibility. 2) WisdomPlay — a multilingual educational Unity game. 3) Smart Attendance System — an IoT RFID solution with sub-400ms scans. You can explore each in detail on this portfolio!",
-  },
-
-  // ── Tech Stack & Skills ──
-  {
-    keywords: ['tech stack', 'technology', 'technologies', 'stack', 'what does ajay use', 'tools'],
-    response: "Ajay's core tech stack: Frontend — React, Next.js 15/16, TypeScript, Tailwind CSS, Three.js. Backend — Node.js, Express, Python, REST APIs, WebSockets. Databases — PostgreSQL, MongoDB, MySQL. DevOps — Git, Docker, Vercel, Linux. Plus Unity for game dev and AI/LLM integrations.",
-  },
-  {
-    keywords: ['frontend', 'front end', 'front-end', 'ui', 'user interface', 'react', 'nextjs', 'next.js'],
-    response: "On the frontend, Ajay works with React.js, Next.js 15/16 (App Router), TypeScript, Tailwind CSS, HTML5, CSS3, Framer Motion for animations, and Three.js for 3D graphics. This very portfolio is built with Next.js 16 and Three.js!",
-  },
-  {
-    keywords: ['backend', 'back end', 'back-end', 'server', 'api', 'node', 'express'],
-    response: "For backend development, Ajay uses Node.js, Express.js, Python, REST APIs, JWT authentication, and WebSocket/Socket.IO for real-time communication. He's comfortable building scalable API architectures from scratch.",
-  },
-  {
-    keywords: ['database', 'db', 'sql', 'nosql', 'postgres', 'mongo', 'mysql', 'data storage'],
-    response: "Ajay works with PostgreSQL, MongoDB, MySQL, Supabase, and Prisma ORM. He can handle both relational and NoSQL databases depending on project requirements.",
-  },
-  {
-    keywords: ['devops', 'deployment', 'cloud', 'docker', 'aws', 'vercel', 'hosting', 'ci cd', 'git'],
-    response: "For DevOps, Ajay uses Git/GitHub, Docker, Vercel, Render, and Linux. He has basic AWS experience and is comfortable deploying applications to production environments.",
-  },
-  {
-    keywords: ['typescript', 'javascript', 'programming language', 'languages', 'coding language'],
-    response: "Ajay is proficient in TypeScript, JavaScript, Python, C#, and has foundational knowledge of C and Java. TypeScript and JavaScript are his primary languages for full-stack web development.",
-  },
-  {
-    keywords: ['tailwind', 'css', 'styling', 'design', 'responsive'],
-    response: "Ajay uses Tailwind CSS extensively for styling — it's his go-to for rapid, responsive, and premium UI development. He also works with vanilla CSS3 and Framer Motion for complex animations.",
-  },
-  {
-    keywords: ['three.js', 'threejs', '3d', 'animation', 'canvas', 'webgl'],
-    response: "Yes! Ajay works with Three.js for 3D web graphics. The animated 3D orbit canvas you see on this portfolio's background is built with Three.js — featuring dynamic geometry, orbiting particles, and accent-colored lighting.",
-  },
-  {
-    keywords: ['ai', 'machine learning', 'ml', 'artificial intelligence', 'llm', 'gemini', 'chatbot'],
-    response: "Ajay integrates AI and LLM capabilities into web applications. This very AI assistant you're chatting with is powered by the Gemini API with a comprehensive portfolio knowledge base. He builds AI-powered features like voice agents and intelligent chat interfaces.",
-  },
-
-  // ── Hiring & Availability ──
-  {
-    keywords: ['hire', 'hiring', 'recruit', 'available', 'availability', 'open to work', 'looking for'],
-    response: "Yes! Ajay is actively available for full-time Software Engineering roles, contracts, and freelance projects. Reach out via the Contact form below or email him directly at ajayhasrb123@gmail.com — he typically responds within 24 hours!",
-  },
-  {
-    keywords: ['freelance', 'freelancer', 'contract', 'project', 'collaboration', 'work together', 'build something'],
-    response: "Absolutely! Ajay takes on freelance projects and collaborations. Whether it's building a web app, designing an API, or creating an AI-powered feature, he's happy to discuss. Use the Contact form or email ajayhasrb123@gmail.com!",
-  },
-  {
-    keywords: ['contact', 'email', 'reach', 'get in touch', 'connect', 'talk', 'message', 'mail'],
-    response: "You can reach Ajay through the Contact form right here on this portfolio (scroll down to the Contact section), or email him directly at ajayhasrb123@gmail.com. He's also on GitHub (ajay9889-ai) and LinkedIn!",
-  },
-  {
-    keywords: ['resume', 'cv', 'download resume', 'pdf'],
-    response: "For Ajay's detailed resume, I'd recommend reaching out to him directly at ajayhasrb123@gmail.com. You can also explore his full background, projects, and skills right here on this portfolio!",
-  },
-  {
-    keywords: ['salary', 'pay', 'compensation', 'rate', 'charge', 'cost', 'pricing'],
-    response: "For discussions about compensation and rates, please contact Ajay directly at ajayhasrb123@gmail.com or use the Contact form. He's flexible and open to discussing terms based on the project scope.",
-  },
-
-  // ── This Portfolio Website ──
-  {
-    keywords: ['portfolio', 'website', 'this site', 'this website', 'how was this built', 'how did you build'],
-    response: "This portfolio is built with Next.js 16, TypeScript, Tailwind CSS, Three.js for the 3D animated background, and features a theme-adaptive dark/light mode, AI voice & chat assistant (that's me!), contact form with email delivery, and project case studies with live emoji reactions.",
-  },
-  {
-    keywords: ['dark mode', 'light mode', 'theme', 'toggle'],
-    response: "This portfolio supports both dark mode (sleek obsidian with solar orange accents) and light mode (clean cream with vibrant orange highlights). Use the sun/moon toggle in the navigation bar to switch!",
-  },
-  {
-    keywords: ['voice', 'voice agent', 'speak', 'microphone', 'talk to you', 'voice chat'],
-    response: "Yes! I have a voice mode — tap the animated circle in Voice mode and speak your question. I'll listen, process, and respond with a male AI voice. You can switch between Voice and Chat modes using the tabs at the top!",
-  },
-
-  // ── GitHub & Social ──
-  {
-    keywords: ['github', 'source code', 'repository', 'repos', 'open source'],
-    response: "Check out Ajay's GitHub at github.com/ajay9889-ai for source code and repositories. He uses Git and GitHub extensively for version control and collaborative development.",
-  },
-  {
-    keywords: ['linkedin', 'social', 'social media', 'profile'],
-    response: "You can find Ajay on LinkedIn at linkedin.com/in/ajay-a. Feel free to connect and reach out for opportunities or collaborations!",
-  },
-
-  // ── Strengths & Values ──
-  {
-    keywords: ['strength', 'best at', 'good at', 'specializ', 'expert', 'strong'],
-    response: "Ajay's core strengths: Full-stack web development with React/Next.js and Node.js, building accessible and visually premium user interfaces, API architecture, AI/LLM integration, and delivering production-ready code under deadlines. He's a HackVerse 2025 winner, which speaks to his ability to innovate under pressure.",
-  },
-  {
-    keywords: ['why should i hire', 'why ajay', 'what makes ajay different', 'unique', 'stand out'],
-    response: "Ajay stands out because he combines strong full-stack engineering with a keen eye for design and AI integration. He won 1st at HackVerse 2025, ships production code (proven at BrikUp), and builds premium user experiences like this portfolio. He's technically versatile and delivers results.",
-  },
-  {
-    keywords: ['hobby', 'hobbies', 'interest', 'fun', 'free time', 'passion'],
-    response: "Beyond coding, Ajay is passionate about building products that solve real problems — especially for underserved communities (like ElderNest for seniors). He enjoys exploring new technologies, building AI-powered features, and creating premium web experiences.",
-  },
-
-  // ── Catch-all for general programming questions ──
-  {
-    keywords: ['what is react', 'explain react', 'what is node', 'what is next.js', 'what is typescript'],
-    response: "Great question! Ajay works extensively with these technologies. React is a UI library, Next.js is a React framework with server-side rendering, Node.js is a server runtime, and TypeScript adds type safety to JavaScript. Ajay uses all of these daily — want to know more about his specific projects with them?",
-  },
-
-  // ── Indian Language / Hinglish Patterns ──
-  {
-    keywords: ['namaste', 'namaskar', 'vanakkam', 'kem cho', 'sat sri akal', 'pranam', 'namskar'],
-    response: "Namaste! 🙏 I am Ajay's AI assistant. Ajay is a Full-Stack Developer from Bengaluru. Feel free to ask me anything about his projects, skills, or how to contact him!",
-  },
-  {
-    keywords: ['kaise ho', 'kaisa hai', 'theek ho', 'sab theek', 'kaisa chal raha'],
-    response: "Main bilkul theek hoon! Aur aap? Main yahan Ajay ke baare mein aapke sawaalon ka jawaab dene ke liye hoon — unke projects, skills, aur work experience ke baare mein bataiye!",
-  },
-  {
-    keywords: ['ajay kaun hai', 'ajay ke baare mein', 'ajay kahan se hai', 'ajay ki details'],
-    response: "Ajay A ek Full-Stack Developer hain Bengaluru se. Unhone HackVerse 2025 hackathon mein 1st place jeeta ElderNest project ke saath, aur BrikUp mein SDE intern the. Woh React, Next.js, Node.js, aur AI systems mein expert hain!",
-  },
-  {
-    keywords: ['kya karta hai', 'kya kaam karta hai', 'kya banata hai', 'developer hai'],
-    response: "Ajay ek Full-Stack Developer aur AI Systems Engineer hain. Woh frontend (React, Next.js) se lekar backend (Node.js, Python, REST APIs) tak sab kuch banate hain. AI-powered features aur 3D web experiences mein bhi unka expertise hai!",
-  },
-  {
-    keywords: ['accha', 'bahut accha', 'wah', 'great bhai', 'nice bhai', 'badhiya'],
-    response: "Thank you! 😊 Ajay is indeed great at what he does. Want to know more about his HackVerse-winning project ElderNest, his internship at BrikUp, or his tech stack?",
-  },
-  {
-    keywords: ['bengaluru', 'bangalore', 'karnataka', 'india mein'],
-    response: "Yes, Ajay is based in Bengaluru, Karnataka — India's Silicon Valley! He is open to both in-office opportunities in Bengaluru and remote work globally.",
-  },
-  {
-    keywords: ['koi project', 'projects dikhao', 'kaunsa project', 'best project'],
-    response: "Ajay ke 3 featured projects hain: 1) ElderNest — HackVerse 2025 winner, elderly assistance platform. 2) WisdomPlay — multilingual educational Unity game. 3) Smart Attendance System — RFID IoT automation. Scroll down to see detailed case studies on this portfolio!",
-  },
-  {
-    keywords: ['hire karna hai', 'kaam chahiye', 'available hai kya', 'join kar sakta hai'],
-    response: "Haan! Ajay full-time software engineering roles, contracts, aur freelance projects ke liye available hain. Contact form use karein ya seedha email karein ajayhasrb123@gmail.com par — woh 24 ghanton mein reply karte hain!",
-  },
-];
-
-
-function getIntelligentPortfolioReply(message: string): string {
-  if (!message || typeof message !== 'string') {
-    return "Ajay A is a Full-Stack Developer & AI Systems Engineer based in Bengaluru. Feel free to ask about his projects, tech stack, or connect at ajayhasrb123@gmail.com!";
+function normalizeMessages(reqBody: any): ChatMessage[] {
+  if (Array.isArray(reqBody.messages) && reqBody.messages.length > 0) {
+    return reqBody.messages;
   }
 
-  // 1. Phonetic voice speech normalization
-  let query = message.toLowerCase().trim();
-  query = query
-    .replace(/\b(elder\s*nest|older\s*nest|alder\s*nest)\b/gi, 'eldernest')
-    .replace(/\b(wisdom\s*play)\b/gi, 'wisdomplay')
-    .replace(/\b(brick\s*up|break\s*up|bric\s*up|brickup)\b/gi, 'brikup')
-    .replace(/\b(hack\s*verse|hackers\s*2025)\b/gi, 'hackverse')
-    .replace(/\b(bms\s*it|bmsit\s*m)\b/gi, 'bmsit')
-    .replace(/\b(smart\s*attendance|rfid\s*attendance)\b/gi, 'smart attendance')
-    .replace(/\b(r\s*j|a\s*j)\b/gi, 'ajay');
-
-  // Clean punctuation for word-level matching
-  const cleanQuery = query.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
-  const queryWords = new Set(cleanQuery.split(' ').filter(w => w.length > 2));
-
-  let bestRule: PatternRule | null = null;
-  let highestScore = 0;
-
-  for (const rule of KNOWLEDGE_BASE) {
-    let ruleScore = 0;
-
-    for (const keyword of rule.keywords) {
-      const lowerKeyword = keyword.toLowerCase();
-
-      // Exact query match
-      if (cleanQuery === lowerKeyword || query === lowerKeyword) {
-        ruleScore += 100;
-        continue;
-      }
-
-      // Exact phrase match in query (multi-word keyword)
-      if (lowerKeyword.includes(' ') && cleanQuery.includes(lowerKeyword)) {
-        ruleScore += lowerKeyword.length * 4;
-        continue;
-      }
-
-      // Word boundary match
-      const regex = new RegExp(`\\b${lowerKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-      if (regex.test(cleanQuery)) {
-        ruleScore += Math.max(10, lowerKeyword.length * 2.5);
-      } else if (cleanQuery.includes(lowerKeyword)) {
-        ruleScore += lowerKeyword.length * 1.2;
+  const list: ChatMessage[] = [];
+  if (Array.isArray(reqBody.history)) {
+    for (const h of reqBody.history) {
+      if (h.sender && h.text) {
+        list.push({ sender: h.sender, text: h.text });
       }
     }
-
-    if (ruleScore > highestScore) {
-      highestScore = ruleScore;
-      bestRule = rule;
-    }
   }
 
-  // Threshold check: if score is sufficient, return best matched rule
-  if (bestRule && highestScore >= 8) {
-    return bestRule.response;
+  if (typeof reqBody.message === 'string' && reqBody.message.trim()) {
+    list.push({ sender: 'user', text: reqBody.message.trim() });
   }
 
-  // Smart default: provide a helpful, comprehensive overview
-  return "Ajay A is a Full-Stack Developer & AI Systems Engineer based in Bengaluru. He won 1st place at HackVerse 2025 with ElderNest, interned as an SDE at BrikUp, and specializes in React, Next.js, Node.js, and AI integrations. Feel free to ask about his projects, tech stack, or reach out at ajayhasrb123@gmail.com!";
+  return list;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EXPRESS HANDLER — POST /api/v1/chat
-// ─────────────────────────────────────────────────────────────────────────────
-
+/**
+ * POST /api/v1/chat
+ * Non-streaming chat endpoint (kept for backward compatibility & fallback)
+ */
 export const handleChat = async (req: Request, res: Response): Promise<void> => {
+  const startTime = Date.now();
+  const parsed = chatRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid request body', details: parsed.error.format() });
+    return;
+  }
+
+  const messages = normalizeMessages(req.body);
+  if (messages.length === 0) {
+    res.status(400).json({ error: 'At least one message is required' });
+    return;
+  }
+
+  const { lang, mode, sessionId } = parsed.data;
+  const lastUserText = messages.filter((m) => m.sender === 'user').pop()?.text || '';
+
   try {
-    const { message, history } = req.body;
+    const result = await generateChat(messages, lang, mode);
+    const latencyMs = Date.now() - startTime;
 
-    if (!message || typeof message !== "string") {
-      res.status(400).json({ error: "Message is required" });
-      return;
-    }
+    recordAnalyticsEvent({
+      sessionId,
+      lang,
+      mode,
+      source: result.source,
+      latencyMs,
+      question: lastUserText,
+    });
 
-    // Build contents array for Gemini
-    const contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
-
-    // Prior conversation history if provided (last 8 exchanges for better context)
-    if (Array.isArray(history)) {
-      for (const item of history.slice(-8)) {
-        if (item.sender === "user") {
-          contents.push({ role: "user", parts: [{ text: item.text }] });
-        } else if (item.sender === "assistant") {
-          contents.push({ role: "model", parts: [{ text: item.text }] });
-        }
-      }
-    }
-
-    // Append current user message
-    contents.push({ role: "user", parts: [{ text: message }] });
-
-    let replyText = "";
-
-    // Attempt Gemini API if key is available
-    if (GEMINI_API_KEY && GEMINI_API_KEY.length > 10) {
-      try {
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-        const geminiRes = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [{ text: SYSTEM_INSTRUCTION }],
-            },
-            contents,
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 400,
-              topP: 0.9,
-            },
-          }),
-        });
-
-        if (geminiRes.ok) {
-          const data = (await geminiRes.json()) as any;
-          replyText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-        } else {
-          console.warn("[AI Chat] Gemini API returned status", geminiRes.status);
-        }
-      } catch (geminiErr) {
-        console.warn("[AI Chat] Gemini fetch error, falling back to knowledge base:", geminiErr);
-      }
-    }
-
-    // Fallback: intelligent portfolio knowledge engine
-    if (!replyText) {
-      replyText = getIntelligentPortfolioReply(message);
-    }
-
-    res.json({ reply: replyText });
-  } catch (err: unknown) {
-    console.error("[AI Chat] API Error:", err);
-    // Even on crash, return a useful response instead of an error
+    res.json({
+      reply: result.reply,
+      action: result.action,
+      source: result.source,
+    });
+  } catch (err: any) {
+    console.error('[ChatController] Error in handleChat:', err);
     res.json({
       reply: "Ajay A is a Full-Stack Developer based in Bengaluru specializing in React, Next.js, and AI systems. Feel free to connect at ajayhasrb123@gmail.com!",
+      source: 'offline',
     });
   }
+};
+
+/**
+ * POST /api/v1/chat/stream
+ * Server-Sent Events (SSE) streaming endpoint
+ */
+export const handleChatStream = async (req: Request, res: Response): Promise<void> => {
+  const startTime = Date.now();
+  const parsed = chatRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid stream request body', details: parsed.error.format() });
+    return;
+  }
+
+  const messages = normalizeMessages(req.body);
+  if (messages.length === 0) {
+    res.status(400).json({ error: 'At least one message is required' });
+    return;
+  }
+
+  const { lang, mode, sessionId } = parsed.data;
+  const lastUserText = messages.filter((m) => m.sender === 'user').pop()?.text || '';
+
+  // Setup SSE response headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+
+  // Keep-alive heartbeat
+  res.write(': ping\n\n');
+
+  const abortController = new AbortController();
+  req.on('close', () => {
+    abortController.abort();
+  });
+
+  let sourceUsed: 'gemini' | 'offline' = 'offline';
+  let completeReply = '';
+
+  try {
+    for await (const event of streamChat(messages, lang, mode, abortController.signal)) {
+      if (res.writableEnded) break;
+
+      if (event.type === 'token') {
+        completeReply += event.value;
+      }
+      if (event.type === 'done') {
+        sourceUsed = event.source;
+      }
+
+      res.write(`data: ${JSON.stringify(event)}\n\n`);
+    }
+
+    const latencyMs = Date.now() - startTime;
+    recordAnalyticsEvent({
+      sessionId,
+      lang,
+      mode,
+      source: sourceUsed,
+      latencyMs,
+      question: lastUserText,
+    });
+  } catch (err: any) {
+    console.error('[ChatController] Stream error:', err);
+    if (!res.writableEnded) {
+      res.write(`data: ${JSON.stringify({ type: 'error', error: 'Stream interrupted' })}\n\n`);
+    }
+  } finally {
+    if (!res.writableEnded) {
+      res.end();
+    }
+  }
+};
+
+/**
+ * POST /api/v1/chat/feedback
+ * Records user feedback (thumbs up / down)
+ */
+export const handleChatFeedback = (req: Request, res: Response): void => {
+  const { messageId, vote } = req.body;
+  if (!messageId || (vote !== 'up' && vote !== 'down')) {
+    res.status(400).json({ error: 'Valid messageId and vote (up|down) required' });
+    return;
+  }
+
+  recordFeedbackVote(messageId, vote);
+  res.json({ ok: true, messageId, vote });
 };

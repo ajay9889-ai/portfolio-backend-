@@ -31,28 +31,40 @@ app.use(cors({
   },
   credentials: true,
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-Session-Id", "X-Analytics-Secret"]
 }));
 
-// 3. Body Parsing & Logging
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+// 3. Body Parsing & Logging (50kb limit)
+app.use(express.json({ limit: "50kb" }));
+app.use(express.urlencoded({ extended: true, limit: "50kb" }));
 if (process.env.NODE_ENV !== "test") {
   app.use(morgan("dev"));
 }
 
-// 4. Rate Limiting for Contact Form
+// 4. Rate Limiting
 const contactLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 requests per hour
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
-    error: "Too many contact requests from this IP. Please try again in 15 minutes."
+    ok: false,
+    error: "Too many contact requests from this IP. Please wait before submitting again, or email ajayhasrb123@gmail.com directly."
   }
 });
 app.use("/api/v1/contact", contactLimiter);
+
+const chatLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "AI rate limit reached. Please wait a moment before sending your next question."
+  }
+});
+app.use("/api/v1/chat", chatLimiter);
 
 // 5. Root Health Endpoint
 app.get("/health", (_req: Request, res: Response) => {
